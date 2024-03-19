@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS stmt_thread_test;
