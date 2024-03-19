@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/abhinav0031/rssagg/internal/database"
+	"github.com/abhinav0031/scratch/internal/database"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
@@ -41,7 +41,7 @@ func main(){
     queries:=database.New(conn)
 	
 	apiCfg:=apiConfig{
-		DB:queries
+		DB:queries,
 	}
 	router:=chi.NewRouter();
 	router.Use(cors.Handler(cors.Options{
@@ -57,7 +57,7 @@ func main(){
 
 	v1Router.Get("/healthz",handlerReadiness)
 	v1Router.Get("/err",handlerErr)
-
+	v1Router.Post("/users",apiCfg.handlerCreateUser)
 	router.Mount("/v1",v1Router)
 
 	srv:=&http.Server{
@@ -65,7 +65,7 @@ func main(){
 		Addr:":"+portString,
 	}
 	log.Printf("Server starting on port %v",portString)
-	err:=srv.ListenAndServe()
+	err=srv.ListenAndServe()
 	if err!=nil{
 		log.Fatal(err)
 	}
