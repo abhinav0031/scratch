@@ -1,0 +1,105 @@
+name: examples
+on:
+  push:
+    branches:
+      - master
+      - release-*
+  pull_request:
+  workflow_dispatch:
+jobs:
+  basic-ydb:
+    concurrency:
+      group: basic-ydb-${{ github.ref }}-${{ matrix.ydb-version }}-${{ matrix.application }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ydb-version: [ 22.5, 23.1, 23.2 ]
+        application: [ native, database_sql, gorm, xorm ]
+    services:
+      ydb:
+        image: cr.yandex/crpsjg1coh47p81vh2lc/yandex-docker-local-ydb:${{ matrix.ydb-version }}
+        ports:
+          - 2135:2135
+          - 2136:2136
+          - 8765:8765
+        volumes:
+          - /tmp/ydb_certs:/ydb_certs
+        env:
+          YDB_LOCAL_SURVIVE_RESTART: true
+          YDB_USE_IN_MEMORY_PDISKS: true
+        options: '-h localhost'
+    env:
+      OS: ubuntu-latest
+      YDB_CONNECTION_STRING: grpc://localhost:2136/local
+      YDB_ANONYMOUS_CREDENTIALS: 1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          cache: true
+      - name: Run basic example ${{ matrix.application }}
+        working-directory: ./examples/basic/${{ matrix.application }}
+        run: go run .
+  basic-postgres:
+    concurrency:
+      group: basic-postgres-${{ matrix.application }}-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        application: [ gorm, xorm ]
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: basic
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      OS: ubuntu-latest
+      GO: 1.21.x
+      POSTGRES_CONNECTION_STRING: postgres://postgres:postgres@localhost:5432/basic?sslmode=disable
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          cache: true
+      - name: Run basic example ${{ matrix.application }} with postgres
+        working-directory: ./examples/basic/${{ matrix.application }}
+        run: go run .
+  basic-sqlite:
+    concurrency:
+      group: basic-sqlite-${{ matrix.application }}-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        application: [ gorm, xorm ]
+    env:
+      OS: ubuntu-latest
+      GO: 1.21.x
+      SQLITE_CONNECTION_STRING: ${{ matrix.application }}.db
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          cache: true
+      - name: Run basic example ${{ matrix.application }} with sqlite
+        working-directory: ./examples/basic/${{ matrix.application }}
+        run: go run .

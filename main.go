@@ -1,14 +1,22 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/abhinav0031/rssagg/internal/database"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
+
+	_ "github.com/lib/pq"
 )
+
+type apiConfig struct{
+	DB *database.Queries
+}
 
 func main(){
 	godotenv.Load(".env")
@@ -18,8 +26,24 @@ func main(){
 		log.Fatal("Port is not found in the env")
 	}
 
-	router:=chi.NewRouter();
+	dbURL:=os.Getenv("DB_URL")
 
+	if dbURL==""{
+		log.Fatal("DB_URL is not found in the env")
+	}
+
+	conn,err:=sql.Open("postgres",dbURL)
+	
+
+	if err!=nil{
+		log.Fatal("Can't conenct tp database")
+	}
+    queries:=database.New(conn)
+	
+	apiCfg:=apiConfig{
+		DB:queries
+	}
+	router:=chi.NewRouter();
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
