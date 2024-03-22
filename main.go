@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/abhinav0031/scratch/internal/database"
 	"github.com/go-chi/chi"
@@ -69,6 +70,9 @@ func main() {
 		Handler: router,
 		Addr:    ":" + portString,
 	}
+	const collectionConcurrency = 10
+	const collectionInterval = time.Minute
+	go startScraping(queries, collectionConcurrency, collectionInterval)
 	log.Printf("Server starting on port %v", portString)
 	err = srv.ListenAndServe()
 	if err != nil {
